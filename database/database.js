@@ -21,4 +21,14 @@ async function koneksi() {
   }
 }
 
-export default koneksi;
+// untuk query
+async function query(command, values) {
+  try {
+    const [result] = await db.query(command, values ?? []);
+    return result;
+  } catch (error) {
+    console.log("Query Error", error);
+  }
+}
+
+export { koneksi, query };
