@@ -45,7 +45,7 @@ const login = async (req, res) => {
 
     if (user.length === 0) {
       // Jika user tidak ditemukan
-      return res.status(404).json({
+      return res.status(400).json({
         msg: "User tidak ditemukan",
       });
     }
@@ -64,14 +64,18 @@ const login = async (req, res) => {
     if (user[0].role === "admin") {
       // Jika role admin, arahkan ke halaman admin
       return res.status(200).json({
-        msg: "Login admin berhasil",
-        // redirectTo: "/admin",
+        msg: `${user[0].nama_lengkap} Berhasil Login`,
+        role: `${user[0].role}`,
+        nama: `${user[0].nama_lengkap}`,
+        foto: `${user[0].foto}`,
       });
     } else if (user[0].role === "user") {
       // Jika role user, arahkan ke halaman user
       return res.status(200).json({
-        msg: "Login user berhasil",
-        // redirectTo: "/user",
+        msg: `${user[0].nama_lengkap} Berhasil Login Sebagai User`,
+        role: `${user[0].role}`,
+        nama: `${user[0].nama_lengkap}`,
+        foto: `${user[0].foto}`,
       });
     } else {
       // Jika role tidak dikenali
