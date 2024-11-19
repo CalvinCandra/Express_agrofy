@@ -2,12 +2,10 @@ import express from "express";
 import path from "path";
 import authrouter from "./AuthRouter/authrouter.js";
 import limbahrouter from "./MenejementRouter/limbahrouter.js";
-<<<<<<< Updated upstream
 import userrouter from "./UserRouter/userrouter.js";
 import kategorirouter from "./KategoriRouter/kategorirouter.js";
-=======
+import artikelrouter from "./ArtikelRouter/artikelrouter.js";
 import indikatorrouter from "./MenejementRouter/indikatorrouter.js";
->>>>>>> Stashed changes
 
 const Router = express();
 const api = "/api/v1";
@@ -21,7 +19,12 @@ Router.use(api, authrouter);
 
 // Rute User Admin
 Router.use(api, userrouter);
+
+// Rute kategori
 Router.use(api, kategorirouter);
+
+// Rute Artikel
+Router.use(api, artikelrouter);
 
 // Rute Limbah
 Router.use(api, limbahrouter);
