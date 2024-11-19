@@ -66,6 +66,7 @@ const login = async (req, res) => {
       return res.status(200).json({
         msg: `${user[0].nama_lengkap} Berhasil Login`,
         role: `${user[0].role}`,
+        email: `${user[0].email}`,
         nama: `${user[0].nama_lengkap}`,
         foto: `${user[0].foto}`,
       });
@@ -74,6 +75,7 @@ const login = async (req, res) => {
       return res.status(200).json({
         msg: `${user[0].nama_lengkap} Berhasil Login Sebagai User`,
         role: `${user[0].role}`,
+        email: `${user[0].email}`,
         nama: `${user[0].nama_lengkap}`,
         foto: `${user[0].foto}`,
       });
