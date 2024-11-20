@@ -3,21 +3,6 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 
-// Konfigurasi penyimpanan file
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     const folder =
-//       file.fieldname === "ckeditor" ? "upload/ckeditor/" : "upload/artikel/";
-//     if (!fs.existsSync(folder)) {
-//       fs.mkdirSync(folder, { recursive: true });
-//     }
-//     cb(null, folder);
-//   },
-//   filename: (req, file, cb) => {
-//     cb(null, Date.now() + path.extname(file.originalname)); // Nama file unik
-//   },
-// });
-
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const folder = "upload/artikel/";
@@ -96,8 +81,7 @@ const getArtikelDetail = async (req, res) => {
     const artikelId = req.params.id;
     const result = await query(
       `
-      SELECT artikel.judul_artikel, artikel.deskripsi, artikel.thumbnail, artikel.created_at, artikel.updated_at, 
-             user.nama_lengkap, kategori.nama_kategori
+      SELECT artikel.*, user.nama_lengkap, kategori.nama_kategori
       FROM artikel
       INNER JOIN user ON artikel.user_id = user.id
       INNER JOIN kategori ON artikel.kategori_id = kategori.id

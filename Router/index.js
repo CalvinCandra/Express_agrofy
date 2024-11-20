@@ -5,13 +5,30 @@ import limbahrouter from "./MenejementRouter/limbahrouter.js";
 import userrouter from "./UserRouter/userrouter.js";
 import kategorirouter from "./KategoriRouter/kategorirouter.js";
 import artikelrouter from "./ArtikelRouter/artikelrouter.js";
+import videorouter from "./VideoRouter/videorouter.js";
 import indikatorrouter from "./MenejementRouter/indikatorrouter.js";
 
 const Router = express();
 const api = "/api/v1";
 
+// kirim link alias untuk di akses di react
+Router.use(
+  "/artikel",
+  express.static(path.join(process.cwd(), "upload/artikel"))
+);
+
+// kirim link alias untuk di akses di react
+Router.use(
+  "/video",
+  express.static(path.join(process.cwd(), "upload/video/video"))
+);
+Router.use(
+  "/thumb",
+  express.static(path.join(process.cwd(), "upload/video/thum"))
+);
+
 // Middleware untuk melayani file statis
-Router.use("/uploads", express.static(path.join(process.cwd(), "img/upload"))); 
+Router.use("/uploads", express.static(path.join(process.cwd(), "img/upload")));
 // `process.cwd()` akan merujuk ke direktori root proyek saat aplikasi dijalankan
 
 // Rute Auth
@@ -25,6 +42,9 @@ Router.use(api, kategorirouter);
 
 // Rute Artikel
 Router.use(api, artikelrouter);
+
+// Rute Artikel
+Router.use(api, videorouter);
 
 // Rute Limbah
 Router.use(api, limbahrouter);
