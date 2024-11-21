@@ -1,38 +1,6 @@
 import { query } from "../../database/database.js";
-import multer from "multer";
 import path from "path";
 import fs from "fs";
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const folder = "upload/artikel/";
-    if (!fs.existsSync(folder)) {
-      fs.mkdirSync(folder, { recursive: true });
-    }
-    cb(null, folder);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // Nama file unik
-  },
-});
-
-// Validasi tipe file (gambar saja)
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // Maksimum 2MB
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png/;
-    const extname = allowedTypes.test(
-      path.extname(file.originalname).toLowerCase()
-    );
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (extname && mimetype) {
-      cb(null, true);
-    } else {
-      cb(new Error("Hanya file gambar dengan format .jpg, .jpeg, atau .png"));
-    }
-  },
-});
 
 // Get data artikel dengan pagination
 const getArtikel = async (req, res) => {
@@ -48,6 +16,7 @@ const getArtikel = async (req, res) => {
       FROM artikel
       INNER JOIN user ON artikel.user_id = user.id
       INNER JOIN kategori ON artikel.kategori_id = kategori.id
+      ORDER BY artikel.id DESC
       LIMIT ? OFFSET ?`,
       [limit, offset]
     );
@@ -104,162 +73,108 @@ const getArtikelDetail = async (req, res) => {
 
 // Menambahkan artikel baru
 const tambahArtikel = async (req, res) => {
-  const uploadMiddleware = upload.single("thumbnail");
+  try {
+    const { judul, deskripsi, email, kategori_id } = req.body;
 
-  uploadMiddleware(req, res, async (err) => {
-    if (err) {
-      return res.status(400).json({ msg: "Upload gagal", error: err.message });
+    const thumbnail = req.file ? req.file.filename : null;
+
+    // Cari user berdasarkan email
+    const users = await query("SELECT * FROM user WHERE email = ?", [email]);
+
+    if (users.length === 0) {
+      return res.status(400).json({ msg: "User tidak ditemukan" });
     }
 
-    try {
-      const { judul_artikel, deskripsi, email, kategori_id } = req.body;
+    const user_id = users[0].id;
 
-      // Pengecekan untuk setiap field
-      if (!judul_artikel) {
-        return res.status(400).json({ msg: "Judul artikel wajib diisi" });
-      }
-      if (!deskripsi) {
-        return res.status(400).json({ msg: "Deskripsi artikel wajib diisi" });
-      }
-      if (!email) {
-        return res.status(400).json({ msg: "Email wajib diisi" });
-      }
-      if (!kategori_id) {
-        return res.status(400).json({ msg: "Kategori ID wajib diisi" });
-      }
+    // Set timestamp untuk created_at dan updated_at
+    const timestamp = new Date();
 
-      const thumbnail = req.file ? req.file.filename : null;
+    // Simpan artikel baru
+    await query(
+      `
+      INSERT INTO artikel (judul_artikel, deskripsi, thumbnail, user_id, kategori_id, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [judul, deskripsi, thumbnail, user_id, kategori_id, timestamp, timestamp]
+    );
 
-      // Cari user berdasarkan email
-      const users = await query("SELECT * FROM user WHERE email = ?", [email]);
-
-      if (users.length === 0) {
-        return res.status(400).json({ msg: "User tidak ditemukan" });
-      }
-
-      const user_id = users[0].id;
-
-      // Set timestamp untuk created_at dan updated_at
-      const timestamp = new Date();
-
-      // Simpan artikel baru
-      await query(
-        `
-        INSERT INTO artikel (judul_artikel, deskripsi, thumbnail, user_id, kategori_id, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [
-          judul_artikel,
-          deskripsi,
-          thumbnail,
-          user_id,
-          kategori_id,
-          timestamp,
-          timestamp,
-        ]
-      );
-
-      return res.status(200).json({
-        msg: "Artikel berhasil ditambahkan",
-        data: { judul_artikel, deskripsi, thumbnail, user_id, kategori_id },
-      });
-    } catch (error) {
-      return res.status(500).json({
-        msg: "Internal Server Error",
-        error: error.message,
-      });
-    }
-  });
+    return res.status(200).json({
+      msg: "Artikel berhasil ditambahkan",
+      data: { judul, deskripsi, thumbnail, user_id, kategori_id },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      msg: "Internal Server Error",
+      error: error.message,
+    });
+  }
 };
 
 // update artikel
 const updateArtikel = async (req, res) => {
-  const uploadMiddleware = upload.single("thumbnail");
+  const { id } = req.params; // ID artikel
+  const { judul, deskripsi, email, kategori_id } = req.body;
+  const newThumbnail = req.file ? req.file.filename : null;
 
-  uploadMiddleware(req, res, async (err) => {
-    if (err) {
-      return res.status(400).json({ msg: err.message });
-    }
+  try {
+    // Ambil artikel lama
+    const artikelLama = await query(`SELECT * FROM artikel WHERE id = ?`, [id]);
 
-    const { id } = req.params; // ID artikel
-    const { judul_artikel, deskripsi, email, kategori_id } = req.body;
-    const newThumbnail = req.file ? req.file.filename : null;
-
-    // Pengecekan untuk setiap field
-    if (!judul_artikel) {
-      return res.status(400).json({ msg: "Judul artikel wajib diisi" });
-    }
-    if (!deskripsi) {
-      return res.status(400).json({ msg: "Deskripsi artikel wajib diisi" });
-    }
-    if (!email) {
-      return res.status(400).json({ msg: "Email wajib diisi" });
-    }
-    if (!kategori_id) {
-      return res.status(400).json({ msg: "Kategori ID wajib diisi" });
+    if (artikelLama.length === 0) {
+      return res.status(404).json({ msg: "Artikel tidak ditemukan" });
     }
 
-    try {
-      // Ambil artikel lama
-      const artikelLama = await query(`SELECT * FROM artikel WHERE id = ?`, [
+    const oldThumbnail = artikelLama[0].thumbnail;
+
+    // Jika ada gambar baru, hapus gambar lama
+    if (newThumbnail && oldThumbnail) {
+      const oldThumbnailPath = path.resolve("upload/artikel/", oldThumbnail);
+
+      if (fs.existsSync(oldThumbnailPath)) {
+        await fs.promises.unlink(oldThumbnailPath); // Hapus file lama
+      }
+    }
+
+    // Cari user berdasarkan email
+    const users = await query("SELECT * FROM user WHERE email = ?", [email]);
+    if (users.length === 0) {
+      return res.status(400).json({ msg: "User tidak ditemukan" });
+    }
+    const user_id = users[0].id;
+
+    // Set timestamp untuk updated_at
+    const timestamp = new Date();
+
+    // Update artikel di database
+    const result = await query(
+      `
+      UPDATE artikel 
+      SET judul_artikel = ?, deskripsi = ?, thumbnail = ?, user_id = ?, kategori_id = ?, updated_at = ?
+      WHERE id = ?`,
+      [
+        judul,
+        deskripsi,
+        newThumbnail ? newThumbnail : oldThumbnail, // Gunakan file lama jika tidak ada file baru
+        user_id,
+        kategori_id,
+        timestamp,
         id,
-      ]);
+      ]
+    );
 
-      if (artikelLama.length === 0) {
-        return res.status(404).json({ msg: "Artikel tidak ditemukan" });
-      }
-
-      const oldThumbnail = artikelLama[0].thumbnail;
-
-      // Jika ada gambar baru, hapus gambar lama
-      if (newThumbnail && oldThumbnail) {
-        const oldThumbnailPath = path.resolve("upload/artikel/", oldThumbnail);
-
-        if (fs.existsSync(oldThumbnailPath)) {
-          await fs.promises.unlink(oldThumbnailPath); // Hapus file lama
-        }
-      }
-
-      // Cari user berdasarkan email
-      const users = await query("SELECT * FROM user WHERE email = ?", [email]);
-      if (users.length === 0) {
-        return res.status(400).json({ msg: "User tidak ditemukan" });
-      }
-      const user_id = users[0].id;
-
-      // Set timestamp untuk updated_at
-      const timestamp = new Date();
-
-      // Update artikel di database
-      const result = await query(
-        `
-        UPDATE artikel 
-        SET judul_artikel = ?, deskripsi = ?, thumbnail = ?, user_id = ?, kategori_id = ?, updated_at = ?
-        WHERE id = ?`,
-        [
-          judul_artikel,
-          deskripsi,
-          newThumbnail || oldThumbnail, // Gunakan file lama jika tidak ada file baru
-          user_id,
-          kategori_id,
-          timestamp,
-          id,
-        ]
-      );
-
-      return res.status(200).json({
-        msg: "Berhasil update",
-        data: {
-          ...result,
-        },
-      });
-    } catch (error) {
-      console.error(error); // Debugging
-      return res.status(500).json({
-        msg: "Gagal Diupdate",
-        error: error.message,
-      });
-    }
-  });
+    return res.status(200).json({
+      msg: "Berhasil update",
+      data: {
+        ...result,
+      },
+    });
+  } catch (error) {
+    console.error(error); // Debugging
+    return res.status(500).json({
+      msg: "Gagal Diupdate",
+      error: error.message,
+    });
+  }
 };
 
 // delete artikel

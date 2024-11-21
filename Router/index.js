@@ -6,6 +6,7 @@ import userrouter from "./UserRouter/userrouter.js";
 import kategorirouter from "./KategoriRouter/kategorirouter.js";
 import artikelrouter from "./ArtikelRouter/artikelrouter.js";
 import videorouter from "./VideoRouter/videorouter.js";
+import komunitasrouter from "./KomunitasRouter/komunitasrouter.js";
 import indikatorrouter from "./MenejementRouter/indikatorrouter.js";
 
 const Router = express();
@@ -22,9 +23,16 @@ Router.use(
   "/video",
   express.static(path.join(process.cwd(), "upload/video/video"))
 );
+
+// kirim link alias untuk di akses di react
+Router.use(
+  "/komunitas",
+  express.static(path.join(process.cwd(), "upload/komunitas"))
+);
+
 Router.use(
   "/thumb",
-  express.static(path.join(process.cwd(), "upload/video/thum"))
+  express.static(path.join(process.cwd(), "upload/video/thumb"))
 );
 
 // Middleware untuk melayani file statis
@@ -43,8 +51,11 @@ Router.use(api, kategorirouter);
 // Rute Artikel
 Router.use(api, artikelrouter);
 
-// Rute Artikel
+// Rute video
 Router.use(api, videorouter);
+
+// Rute komunitas
+Router.use(api, komunitasrouter);
 
 // Rute Limbah
 Router.use(api, limbahrouter);

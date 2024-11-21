@@ -4,5 +4,10 @@
 # Environment file
 .env
 
-#upload
+#upload folder
 /upload/
+/upload/artikel/
+/upload/komunitas/
+/upload/video/
+/upload/video/thumb/
+/upload/video/video/
