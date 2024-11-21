@@ -1,48 +1,6 @@
 import { query } from "../../database/database.js";
-import multer from "multer";
 import path from "path";
 import fs from "fs";
-
-// set untuk tempat upload
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    if (file.mimetype.startsWith("video/")) {
-      cb(null, "upload/video/video");
-    } else if (file.mimetype.startsWith("image/")) {
-      cb(null, "upload/video/thum");
-    } else {
-      cb(new Error("Invalid file type"));
-    }
-  },
-  filename: (req, file, cb) => {
-    const uniqueFilename = Date.now() + path.extname(file.originalname);
-    cb(null, uniqueFilename);
-  },
-});
-
-// Validasi tipe file (video saja)
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: (req, file) => {
-      if (file.mimetype.startsWith("video/")) {
-        return 500 * 1024 * 1024; // 10 MB
-      } else if (file.mimetype.startsWith("image/")) {
-        return 5 * 1024 * 1024; // 5 MB
-      }
-    },
-  },
-  fileFilter: (req, file, cb) => {
-    const allowedTypes = {
-      video: /mp4|mkv/,
-      thumbnail: /jpg|jpeg|png/,
-    };
-    const isAllowed = allowedTypes[file.fieldname].test(
-      path.extname(file.originalname).toLowerCase()
-    );
-    cb(null, isAllowed);
-  },
-});
 
 // Get data video dengan pagination
 const getVideo = async (req, res) => {
@@ -58,6 +16,7 @@ const getVideo = async (req, res) => {
       FROM video
       INNER JOIN user ON video.user_id = user.id
       INNER JOIN kategori ON video.kategori_id = kategori.id
+      ORDER BY video.id DESC
       LIMIT ? OFFSET ?`,
       [limit, offset]
     );
@@ -114,196 +73,143 @@ const getVideoDetail = async (req, res) => {
 
 // Menambahkan video baru
 const tambahVideo = async (req, res) => {
-  const uploadFields = upload.fields([
-    { name: "video", maxCount: 1 },
-    { name: "thumbnail", maxCount: 1 },
-  ]);
+  try {
+    const { judul, deskripsi, email, kategori_id } = req.body;
 
-  uploadFields(req, res, async (err) => {
-    if (err) {
-      return res.status(400).json({ msg: "Upload Gagal", error: err.message });
+    // Cari user berdasarkan email
+    const users = await query("SELECT * FROM user WHERE email = ?", [email]);
+    if (users.length === 0) {
+      return res.status(400).json({ msg: "User tidak ditemukan" });
     }
+    const user_id = users[0].id;
 
-    try {
-      const { judul_video, deskripsi, email, kategori_id } = req.body;
+    // variabel untuk video dan thumbnail
+    const videoName = req.files["video"]
+      ? req.files["video"][0].filename
+      : null;
+    const thumbnail = req.files["thumbnail"]
+      ? req.files["thumbnail"][0].filename
+      : null;
 
-      // Pengecekan untuk setiap field
-      if (!judul_video) {
-        return res.status(400).json({ msg: "Judul Video wajib diisi" });
-      }
-      if (!deskripsi) {
-        return res.status(400).json({ msg: "Deskripsi Video wajib diisi" });
-      }
-      if (!email) {
-        return res.status(400).json({ msg: "Email wajib diisi" });
-      }
-      if (!kategori_id) {
-        return res.status(400).json({ msg: "Kategori ID wajib diisi" });
-      }
+    // Set timestamp untuk created_at dan updated_at
+    const timestamp = new Date();
 
-      // Cari user berdasarkan email
-      const users = await query("SELECT * FROM user WHERE email = ?", [email]);
-      if (users.length === 0) {
-        return res.status(400).json({ msg: "User tidak ditemukan" });
-      }
-      const user_id = users[0].id;
+    // Simpan artikel baru
+    await query(
+      `
+          INSERT INTO video (judul_video, deskripsi, video, thumbnail, user_id, kategori_id, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        judul,
+        deskripsi,
+        videoName,
+        thumbnail,
+        user_id,
+        kategori_id,
+        timestamp,
+        timestamp,
+      ]
+    );
 
-      // variabel untuk video dan thumbnail
-      const videoName = req.files["video"]
-        ? req.files["video"][0].filename
-        : null;
-      const thumbnail = req.files["thumbnail"]
-        ? req.files["thumbnail"][0].filename
-        : null;
-
-      // Set timestamp untuk created_at dan updated_at
-      const timestamp = new Date();
-
-      // Simpan artikel baru
-      await query(
-        `
-            INSERT INTO video (judul_video, deskripsi, video, thumbnail, user_id, kategori_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          judul_video,
-          deskripsi,
-          videoName,
-          thumbnail,
-          user_id,
-          kategori_id,
-          timestamp,
-          timestamp,
-        ]
-      );
-
-      return res.status(200).json({
-        msg: "Video berhasil ditambahkan",
-        data: {
-          judul_video,
-          deskripsi,
-          videoName,
-          thumbnail,
-          user_id,
-          kategori_id,
-        },
-      });
-    } catch (error) {
-      return res.status(500).json({
-        msg: "Internal Server Error",
-        error: error.message,
-      });
-    }
-  });
+    return res.status(200).json({
+      msg: "Video berhasil ditambahkan",
+      data: {
+        judul_video,
+        deskripsi,
+        videoName,
+        thumbnail,
+        user_id,
+        kategori_id,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      msg: "Internal Server Error",
+      error: error.message,
+    });
+  }
 };
 
 // update artikel
 const updateVideo = async (req, res) => {
-  const uploadFields = upload.fields([
-    { name: "video", maxCount: 1 },
-    { name: "thumbnail", maxCount: 1 },
-  ]);
+  const { id } = req.params; // ID artikel
+  const { judul, deskripsi, email, kategori_id } = req.body;
+  const newVideo = req.files["video"] ? req.files["video"][0].filename : null;
+  const newThumbnail = req.files["thumbnail"]
+    ? req.files["thumbnail"][0].filename
+    : null;
 
-  uploadFields(req, res, async (err) => {
-    if (err) {
-      return res.status(400).json({ msg: err.message });
+  try {
+    // Ambil video lama
+    const lama = await query(`SELECT * FROM video WHERE id = ?`, [id]);
+
+    if (lama.length === 0) {
+      return res.status(400).json({ msg: "Video tidak ditemukan" });
     }
 
-    const { id } = req.params; // ID artikel
-    const { judul_video, deskripsi, email, kategori_id } = req.body;
-    const newVideo = req.files["video"] ? req.files["video"][0].filename : null;
-    const newThumbnail = req.files["thumbnail"]
-      ? req.files["thumbnail"][0].filename
-      : null;
+    // ambil thumbnail dan video lama
+    const oldVideo = lama[0].video;
+    const oldThumbnail = lama[0].thumbnail;
 
-    // Pengecekan untuk setiap field
-    if (!judul_video) {
-      return res.status(400).json({ msg: "Judul Video wajib diisi" });
-    }
-    if (!deskripsi) {
-      return res.status(400).json({ msg: "Deskripsi Video wajib diisi" });
-    }
-    if (!email) {
-      return res.status(400).json({ msg: "Email wajib diisi" });
-    }
-    if (!kategori_id) {
-      return res.status(400).json({ msg: "Kategori ID wajib diisi" });
-    }
+    // Jika ada video  baru, hapus video lama
+    if (newVideo && oldVideo) {
+      const oldVideoPath = path.resolve("upload/video/video/", oldVideo);
 
-    try {
-      // Ambil video lama
-      const lama = await query(`SELECT * FROM video WHERE id = ?`, [id]);
-
-      if (lama.length === 0) {
-        return res.status(400).json({ msg: "Video tidak ditemukan" });
+      if (fs.existsSync(oldVideoPath)) {
+        await fs.promises.unlink(oldVideoPath); // Hapus file lama
       }
-
-      // ambil thumbnail dan video lama
-      const oldVideo = lama[0].video;
-      const oldThumbnail = lama[0].thumbnail;
-
-      // Jika ada video  baru, hapus video lama
-      if (newVideo && oldVideo) {
-        const oldVideoPath = path.resolve("upload/video/video/", oldVideo);
-
-        if (fs.existsSync(oldVideoPath)) {
-          await fs.promises.unlink(oldVideoPath); // Hapus file lama
-        }
-      }
-
-      // Jika ada video  baru, hapus video lama
-      if (newThumbnail && oldThumbnail) {
-        const oldThumbnailPath = path.resolve(
-          "upload/video/thum/",
-          oldThumbnail
-        );
-
-        if (fs.existsSync(oldThumbnailPath)) {
-          await fs.promises.unlink(oldThumbnailPath); // Hapus file lama
-        }
-      }
-
-      // Cari user berdasarkan email
-      const users = await query("SELECT * FROM user WHERE email = ?", [email]);
-      if (users.length === 0) {
-        return res.status(400).json({ msg: "User tidak ditemukan" });
-      }
-      const user_id = users[0].id;
-
-      // Set timestamp untuk updated_at
-      const timestamp = new Date();
-
-      // Update artikel di database
-      const result = await query(
-        `
-          UPDATE video 
-          SET judul_video = ?, deskripsi = ?, video = ?, thumbnail = ?, user_id = ?, kategori_id = ?, updated_at = ?
-          WHERE id = ?`,
-        [
-          judul_video,
-          deskripsi,
-          newVideo || oldVideo, // Gunakan file lama jika tidak ada file baru
-          newThumbnail || oldThumbnail, // Gunakan file lama jika tidak ada file baru
-          user_id,
-          kategori_id,
-          timestamp,
-          id,
-        ]
-      );
-
-      return res.status(200).json({
-        msg: "Berhasil update",
-        data: {
-          ...result,
-        },
-      });
-    } catch (error) {
-      console.error(error); // Debugging
-      return res.status(500).json({
-        msg: "Gagal Diupdate",
-        error: error.message,
-      });
     }
-  });
+
+    // Jika ada video  baru, hapus video lama
+    if (newThumbnail && oldThumbnail) {
+      const oldThumbnailPath = path.resolve("upload/video/thum/", oldThumbnail);
+
+      if (fs.existsSync(oldThumbnailPath)) {
+        await fs.promises.unlink(oldThumbnailPath); // Hapus file lama
+      }
+    }
+
+    // Cari user berdasarkan email
+    const users = await query("SELECT * FROM user WHERE email = ?", [email]);
+    if (users.length === 0) {
+      return res.status(400).json({ msg: "User tidak ditemukan" });
+    }
+    const user_id = users[0].id;
+
+    // Set timestamp untuk updated_at
+    const timestamp = new Date();
+
+    // Update artikel di database
+    const result = await query(
+      `
+        UPDATE video 
+        SET judul_video = ?, deskripsi = ?, video = ?, thumbnail = ?, user_id = ?, kategori_id = ?, updated_at = ?
+        WHERE id = ?`,
+      [
+        judul,
+        deskripsi,
+        newVideo ? newVideo : oldVideo, // Gunakan file lama jika tidak ada file baru
+        newThumbnail ? newThumbnail : oldThumbnail, // Gunakan file lama jika tidak ada file baru
+        user_id,
+        kategori_id,
+        timestamp,
+        id,
+      ]
+    );
+
+    return res.status(200).json({
+      msg: "Berhasil update",
+      data: {
+        ...result,
+      },
+    });
+  } catch (error) {
+    console.error(error); // Debugging
+    return res.status(500).json({
+      msg: "Gagal Diupdate",
+      error: error.message,
+    });
+  }
 };
 
 // delete artikel
@@ -324,7 +230,7 @@ const deleteVideo = async (req, res) => {
 
     if (gambarLama) {
       // Cek apakah thumbnail tidak null
-      const hapusgambar = path.resolve("upload/video/thum", gambarLama);
+      const hapusgambar = path.resolve("upload/video/thumb", gambarLama);
 
       // Hapus file gambar jika ada
       if (fs.existsSync(hapusgambar)) {
@@ -334,7 +240,7 @@ const deleteVideo = async (req, res) => {
 
     if (videoLama) {
       // Cek apakah video tidak null
-      const hapusvideo = path.resolve("upload/video/", videoLama);
+      const hapusvideo = path.resolve("upload/video/video", videoLama);
 
       // Hapus file video jika ada
       if (fs.existsSync(hapusvideo)) {
@@ -345,9 +251,7 @@ const deleteVideo = async (req, res) => {
     await query(`DELETE FROM video WHERE id = ?`, [id]);
     return res.status(200).json({ msg: "Berhasil di hapus" });
   } catch (error) {
-    return res
-      .status(400)
-      .json({ msg: "Gagal di hapus", error: error.message });
+    return res.status(400).json({ msg: "Gagal di hapus", error });
   }
 };
 

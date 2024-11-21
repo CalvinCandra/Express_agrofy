@@ -4,11 +4,15 @@ import {
   getUserAdmin,
   updateAdmin,
 } from "../../Controller/UserController/usercontroller.js";
+import { validasi } from "../../middleware/validasi.js";
 
 const userrouter = express();
 
 userrouter.get("/getadmin", getUserAdmin);
-userrouter.put("/updateadmin/:id", updateAdmin);
-userrouter.delete("/deleteadmin/:id", deleteAdmin);
+userrouter.put("/updateadmin/:id", [
+  validasi(["email", "nama_lengkap"]),
+  updateAdmin,
+]);
+userrouter.delete("/deleteadmin/:id", [validasi(["id"]), deleteAdmin]);
 
 export default userrouter;

@@ -7,9 +7,15 @@ const register = async (req, res) => {
     nama_lengkap,
     email,
     password,
+    confirmPassword,
     foto = null,
     role = "user",
   } = req.body;
+
+  // validasi password dan confirmasi password
+  if (password !== confirmPassword) {
+    return res.status(400).json({ msg: "Password tidak cocok" });
+  }
 
   //set timestamp otomatis
   const timestamp = new Date();
@@ -62,7 +68,7 @@ const login = async (req, res) => {
 
     // Jika login berhasil, periksa role pengguna
     if (user[0].role === "admin") {
-      // Jika role admin, arahkan ke halaman admin
+      // Jika role admin
       return res.status(200).json({
         msg: `${user[0].nama_lengkap} Berhasil Login`,
         role: `${user[0].role}`,
@@ -71,9 +77,9 @@ const login = async (req, res) => {
         foto: `${user[0].foto}`,
       });
     } else if (user[0].role === "user") {
-      // Jika role user, arahkan ke halaman user
+      // Jika role user
       return res.status(200).json({
-        msg: `${user[0].nama_lengkap} Berhasil Login Sebagai User`,
+        msg: `${user[0].nama_lengkap} Berhasil Login`,
         role: `${user[0].role}`,
         email: `${user[0].email}`,
         nama: `${user[0].nama_lengkap}`,

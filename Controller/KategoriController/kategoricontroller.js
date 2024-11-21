@@ -13,7 +13,7 @@ const getKategori = async (req, res) => {
     // Query untuk mendapatkan data dengan pagination
     const results = await query(
       `
-        SELECT * FROM kategori LIMIT ? OFFSET ?
+        SELECT * FROM kategori ORDER BY kategori.id DESC LIMIT ? OFFSET ?
       `,
       [limit, offset]
     );

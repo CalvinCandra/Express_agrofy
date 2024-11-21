@@ -13,7 +13,7 @@ const getUserAdmin = async (req, res) => {
     // Query untuk mendapatkan data admin dengan pagination
     const results = await query(
       `
-      SELECT * FROM user WHERE role='admin' LIMIT ? OFFSET ?
+      SELECT * FROM user WHERE role='admin' ORDER BY user.id DESC LIMIT ? OFFSET ?
     `,
       [limit, offset]
     );
@@ -51,6 +51,14 @@ const updateAdmin = async (req, res) => {
   const { email, nama_lengkap } = req.body;
   const { id } = req.params;
 
+  // Pengecekan untuk setiap field
+  if (!nama_lengkap) {
+    return res.status(400).json({ msg: "Nama Lengkap wajib diisi" });
+  }
+  if (!email) {
+    return res.status(400).json({ msg: "Email wajib diisi" });
+  }
+
   // set data timestamp
   const timestamp = new Date();
 
@@ -76,6 +84,12 @@ const updateAdmin = async (req, res) => {
 // delete user
 const deleteAdmin = async (req, res) => {
   const { id } = req.params;
+
+  // Pengecekan untuk setiap field
+  if (!id) {
+    return res.status(400).json({ msg: "Id tidak ada" });
+  }
+
   try {
     await query(`DELETE FROM user WHERE id = ?`, [id]);
     return res.status(200).json({ msg: "Berhasil di hapus" });
