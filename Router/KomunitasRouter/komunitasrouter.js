@@ -14,11 +14,11 @@ komunitasrouter.get("/getkomunitas", getKomunitas);
 komunitasrouter.get("/getkomunitasbalasan/:id", getKomunitasBalasan);
 komunitasrouter.post(
   "/tambahkomunitas",
-  [uploadKomunitas.single("gambar"), validasi(["caption", "email"])],
+  [uploadKomunitas.single("gambar"), validasi(["caption"])],
   tambahKomunitas
 );
 komunitasrouter.post("/tambahbalasan/:id", [
-  validasi(["balasan", "email"]),
+  validasi(["balasan"]),
   tambahBalasan,
 ]);
 

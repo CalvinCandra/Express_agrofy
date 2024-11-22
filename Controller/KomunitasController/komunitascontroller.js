@@ -3,35 +3,18 @@ import { query } from "../../database/database.js";
 // Get data video dengan pagination
 const getKomunitas = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const offset = (page - 1) * limit;
-
     // Query untuk mendapatkan data artikel dengan pagination
     const results = await query(
       `
       SELECT komunitas.*, user.nama_lengkap, user.foto
       FROM komunitas
       INNER JOIN user ON komunitas.user_id = user.id
-      ORDER BY komunitas.id DESC
-      LIMIT ? OFFSET ?`,
-      [limit, offset]
+      ORDER BY komunitas.id DESC`
     );
-
-    // Hitung jumlah total data artikel
-    const totalResults = await query(`SELECT COUNT(*) AS total FROM komunitas`);
-    const totalData = totalResults[0].total;
-    const totalPages = Math.ceil(totalData / limit);
 
     return res.status(200).json({
       msg: "Berhasil",
       data: results,
-      pagination: {
-        totalData,
-        totalPages,
-        currentPage: page,
-        perPage: limit,
-      },
     });
   } catch (error) {
     return res.status(500).json({
@@ -71,7 +54,10 @@ const getKomunitasBalasan = async (req, res) => {
 
 // Menambahkan komunitas baru
 const tambahKomunitas = async (req, res) => {
-  const { caption, email } = req.body;
+  const { caption } = req.body;
+
+  // get email dari token
+  const email = req.user.email;
 
   try {
     // Cari user berdasarkan email
@@ -114,8 +100,11 @@ const tambahKomunitas = async (req, res) => {
 
 // Menambahkan balasan baru
 const tambahBalasan = async (req, res) => {
-  const { balasan, email } = req.body;
+  const { balasan } = req.body;
   const komunitasId = req.params.id;
+
+  // get email dari token
+  const email = req.user.email;
 
   try {
     // Cari user berdasarkan email

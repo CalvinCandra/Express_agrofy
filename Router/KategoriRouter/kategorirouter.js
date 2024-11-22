@@ -15,12 +15,9 @@ kategorirouter.post("/tambahkategori", [
   tambahKategori,
 ]);
 kategorirouter.put("/updatekategori/:id", [
-  validasi(["nama_kategori", "id"]),
+  validasi(["nama_kategori"]),
   updateKategori,
 ]);
-kategorirouter.delete("/deletekategori/:id", [
-  validasi(["id"]),
-  deleteKategori,
-]);
+kategorirouter.delete("/deletekategori/:id", deleteKategori);
 
 export default kategorirouter;

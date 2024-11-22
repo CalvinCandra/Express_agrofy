@@ -13,6 +13,6 @@ userrouter.put("/updateadmin/:id", [
   validasi(["email", "nama_lengkap"]),
   updateAdmin,
 ]);
-userrouter.delete("/deleteadmin/:id", [validasi(["id"]), deleteAdmin]);
+userrouter.delete("/deleteadmin/:id", deleteAdmin);
 
 export default userrouter;

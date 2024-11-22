@@ -7,22 +7,28 @@ const getVideo = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+    const search = req.query.search || ""; // Parameter search, default kosong jika tidak ada
+
     const offset = (page - 1) * limit;
 
-    // Query untuk mendapatkan data artikel dengan pagination
+    // Query untuk mendapatkan data video dengan pagination
     const results = await query(
       `
       SELECT video.*, user.nama_lengkap, kategori.nama_kategori
       FROM video
       INNER JOIN user ON video.user_id = user.id
       INNER JOIN kategori ON video.kategori_id = kategori.id
+      WHERE video.judul_video LIKE ?
       ORDER BY video.id DESC
       LIMIT ? OFFSET ?`,
-      [limit, offset]
+      [`%${search}%`, limit, offset]
     );
 
-    // Hitung jumlah total data artikel
-    const totalResults = await query(`SELECT COUNT(*) AS total FROM video`);
+    // Hitung jumlah total data video
+    const totalResults = await query(
+      `SELECT COUNT(*) AS total FROM video WHERE video.judul_video`,
+      [`%${search}%`]
+    );
     const totalData = totalResults[0].total;
     const totalPages = Math.ceil(totalData / limit);
 
@@ -74,7 +80,10 @@ const getVideoDetail = async (req, res) => {
 // Menambahkan video baru
 const tambahVideo = async (req, res) => {
   try {
-    const { judul, deskripsi, email, kategori_id } = req.body;
+    const { judul, deskripsi, kategori_id } = req.body;
+
+    // get email dari token
+    const email = req.user.email;
 
     // Cari user berdasarkan email
     const users = await query("SELECT * FROM user WHERE email = ?", [email]);
@@ -133,11 +142,14 @@ const tambahVideo = async (req, res) => {
 // update artikel
 const updateVideo = async (req, res) => {
   const { id } = req.params; // ID artikel
-  const { judul, deskripsi, email, kategori_id } = req.body;
+  const { judul, deskripsi, kategori_id } = req.body;
   const newVideo = req.files["video"] ? req.files["video"][0].filename : null;
   const newThumbnail = req.files["thumbnail"]
     ? req.files["thumbnail"][0].filename
     : null;
+
+  // get email dari token
+  const email = req.user.email;
 
   try {
     // Ambil video lama

@@ -8,6 +8,7 @@ import artikelrouter from "./ArtikelRouter/artikelrouter.js";
 import videorouter from "./VideoRouter/videorouter.js";
 import komunitasrouter from "./KomunitasRouter/komunitasrouter.js";
 import indikatorrouter from "./MenejementRouter/indikatorrouter.js";
+import passport from "../middleware/passport.js";
 
 const Router = express();
 const api = "/api/v1";
@@ -43,19 +44,39 @@ Router.use("/uploads", express.static(path.join(process.cwd(), "img/upload")));
 Router.use(api, authrouter);
 
 // Rute User Admin
-Router.use(api, userrouter);
+Router.use(
+  api,
+  passport.authenticate("internal-rule", { session: false }),
+  userrouter
+);
 
 // Rute kategori
-Router.use(api, kategorirouter);
+Router.use(
+  api,
+  passport.authenticate("internal-rule", { session: false }),
+  kategorirouter
+);
 
 // Rute Artikel
-Router.use(api, artikelrouter);
+Router.use(
+  api,
+  passport.authenticate("internal-rule", { session: false }),
+  artikelrouter
+);
 
 // Rute video
-Router.use(api, videorouter);
+Router.use(
+  api,
+  passport.authenticate("internal-rule", { session: false }),
+  videorouter
+);
 
 // Rute komunitas
-Router.use(api, komunitasrouter);
+Router.use(
+  api,
+  passport.authenticate("internal-rule", { session: false }),
+  komunitasrouter
+);
 
 // Rute Limbah
 Router.use(api, limbahrouter);
