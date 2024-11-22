@@ -6,6 +6,7 @@ const getKategori = async (req, res) => {
     // Ambil parameter 'page' dan 'limit' dari query string
     const page = parseInt(req.query.page) || 1; // Default halaman 1
     const limit = parseInt(req.query.limit) || 10; // Default limit 10 data per halaman
+    const search = req.query.search || ""; // Parameter search, default kosong jika tidak ada
 
     // Hitung OFFSET berdasarkan halaman
     const offset = (page - 1) * limit;
@@ -13,13 +14,24 @@ const getKategori = async (req, res) => {
     // Query untuk mendapatkan data dengan pagination
     const results = await query(
       `
-        SELECT * FROM kategori ORDER BY kategori.id DESC LIMIT ? OFFSET ?
+        SELECT kategori.*, user.nama_lengkap
+        FROM kategori
+        INNER JOIN user ON kategori.user_id = user.id
+        WHERE kategori.nama_kategori LIKE ?
+        ORDER BY kategori.id DESC LIMIT ? OFFSET ?
       `,
-      [limit, offset]
+      [`%${search}%`, limit, offset]
     );
 
     // Hitung jumlah total data
-    const totalResults = await query(`SELECT COUNT(*) AS total FROM kategori`);
+    const totalResults = await query(
+      `
+        SELECT COUNT(*) AS total 
+        FROM kategori
+        WHERE kategori.nama_kategori LIKE ?
+      `,
+      [`%${search}%`]
+    );
     const totalData = totalResults[0].total;
 
     // Hitung jumlah halaman
@@ -44,17 +56,28 @@ const getKategori = async (req, res) => {
 };
 
 // tambah
-const tambahKategori = async (req, res) => {
+const tambahKategori = async (req, res, next) => {
   const { nama_kategori } = req.body;
+
+  // get email dari token
+  const email = req.user.email;
+
+  // Cari user berdasarkan email
+  const users = await query("SELECT * FROM user WHERE email = ?", [email]);
+  if (users.length === 0) {
+    return res.status(400).json({ msg: "User tidak ditemukan" });
+  }
+  const user_id = users[0].id;
 
   //set timestamp otomatis
   const timestamp = new Date();
 
   try {
     await query(
-      `INSERT INTO kategori (nama_kategori, created_at, updated_at) VALUES (?,?,?)`,
-      [nama_kategori, timestamp, timestamp]
+      `INSERT INTO kategori (nama_kategori, user_id, created_at, updated_at) VALUES (?,?,?,?)`,
+      [nama_kategori, user_id, timestamp, timestamp]
     );
+    next();
     return res.status(200).json({
       msg: "Berhasil tambah",
       data: {
@@ -75,13 +98,22 @@ const updateKategori = async (req, res) => {
   const { nama_kategori } = req.body;
   const { id } = req.params;
 
+  // get email dari token
+  const email = req.user.email;
+
+  const users = await query("SELECT * FROM user WHERE email = ?", [email]);
+  if (users.length === 0) {
+    return res.status(400).json({ msg: "User tidak ditemukan" });
+  }
+  const user_id = users[0].id;
+
   // set data timestamp
   const timestamp = new Date();
 
   try {
     await query(
-      `UPDATE kategori SET nama_kategori = ?, updated_at = ? WHERE id=?`,
-      [nama_kategori, timestamp, id]
+      `UPDATE kategori SET nama_kategori = ?, user_id = ?, updated_at = ? WHERE id=?`,
+      [nama_kategori, user_id, timestamp, id]
     );
     return res.status(200).json({
       msg: "Berhasil update",

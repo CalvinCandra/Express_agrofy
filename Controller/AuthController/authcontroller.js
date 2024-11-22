@@ -1,5 +1,6 @@
 import { query } from "../../database/database.js";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 // register
 const register = async (req, res) => {
@@ -66,10 +67,23 @@ const login = async (req, res) => {
       });
     }
 
+    // Jika login berhasil, buatkan JWT
+    const token = await jwt.sign(
+      {
+        name: user[0].nama_lengkap,
+        email: user[0].email,
+        role: user[0].role,
+        foto: user[0].foto,
+      },
+      "c89f025c-4179-4d92-882a-f3114c63e027",
+      { expiresIn: "6h" }
+    );
+
     // Jika login berhasil, periksa role pengguna
     if (user[0].role === "admin") {
       // Jika role admin
       return res.status(200).json({
+        token: `Bearer ${token}`,
         msg: `${user[0].nama_lengkap} Berhasil Login`,
         role: `${user[0].role}`,
         email: `${user[0].email}`,
@@ -79,11 +93,12 @@ const login = async (req, res) => {
     } else if (user[0].role === "user") {
       // Jika role user
       return res.status(200).json({
+        token: `Bearer ${token}`,
         msg: `${user[0].nama_lengkap} Berhasil Login`,
-        role: `${user[0].role}`,
-        email: `${user[0].email}`,
-        nama: `${user[0].nama_lengkap}`,
-        foto: `${user[0].foto}`,
+        // role: `${user[0].role}`,
+        // email: `${user[0].email}`,
+        // nama: `${user[0].nama_lengkap}`,
+        // foto: `${user[0].foto}`,
       });
     } else {
       // Jika role tidak dikenali
