@@ -18,6 +18,13 @@ const register = async (req, res) => {
     return res.status(400).json({ msg: "Password tidak cocok" });
   }
 
+  // cek apakah ada email yang sama
+  const cekMail = await query("SELECT * FROM user WHERE email = ?", [email]);
+
+  if (cekMail.length > 0) {
+    return res.status(400).json({ msg: "Email sudah terdaftar" });
+  }
+
   //set timestamp otomatis
   const timestamp = new Date();
 
@@ -95,10 +102,10 @@ const login = async (req, res) => {
       return res.status(200).json({
         token: `Bearer ${token}`,
         msg: `${user[0].nama_lengkap} Berhasil Login`,
-        // role: `${user[0].role}`,
-        // email: `${user[0].email}`,
-        // nama: `${user[0].nama_lengkap}`,
-        // foto: `${user[0].foto}`,
+        role: `${user[0].role}`,
+        email: `${user[0].email}`,
+        nama: `${user[0].nama_lengkap}`,
+        foto: `${user[0].foto}`,
       });
     } else {
       // Jika role tidak dikenali

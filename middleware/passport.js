@@ -15,7 +15,7 @@ passport.use(
       passReqToCallback: false,
     },
     (payload, done) => {
-      const { name, email, role, foto } = payload;
+      const { name, email, role } = payload;
 
       // Verifikasi payload yang diterima
       if (!name || !email || !role) {
