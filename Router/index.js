@@ -9,6 +9,8 @@ import videorouter from "./VideoRouter/videorouter.js";
 import komunitasrouter from "./KomunitasRouter/komunitasrouter.js";
 import indikatorrouter from "./MenejementRouter/indikatorrouter.js";
 import passport from "../middleware/passport.js";
+import profilerouter from "./ProfileRouter/profilerouter.js";
+import riwayatrouter from "./MenejementRouter/riwayatrouter.js";
 
 const Router = express();
 const api = "/api/v1";
@@ -83,5 +85,11 @@ Router.use(api, limbahrouter);
 
 // Rute indikator
 Router.use(api, indikatorrouter);
+
+// Rute profile
+Router.use(api, profilerouter);
+
+// Rute riwayat
+Router.use(api, riwayatrouter);
 
 export default Router;
