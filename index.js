@@ -15,6 +15,8 @@ app.use(cors());
 app.use(express.json());
 app.use(Router);
 
+
+
 app.listen(process.env.APP_PORT, async () => {
   await koneksi();
   console.log(`Server is running on http://localhost:${process.env.APP_PORT}`);

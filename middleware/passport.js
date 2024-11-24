@@ -3,7 +3,7 @@ import passportJWT from "passport-jwt";
 
 const privateKey = "c89f025c-4179-4d92-882a-f3114c63e027"; // private key untuk sign JWT
 const ExtractJWT = passportJWT.ExtractJwt;
-const StrategyJWT = passportJWT.Strategy;
+const StrategyJWT = passportJWT.Strategy; 
 
 // Passport strategy untuk JWT
 passport.use(
