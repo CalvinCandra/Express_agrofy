@@ -1,6 +1,7 @@
 import { query } from "../../database/database.js";
 import path from "path";
 import fs from "fs";
+import { deleteUploadArtikel } from "../../utils/deleteUploadArtikel.js";
 
 // Get data artikel dengan pagination
 const getArtikel = async (req, res) => {
@@ -85,6 +86,12 @@ const tambahArtikel = async (req, res) => {
 
     const thumbnail = req.file ? req.file.filename : null;
 
+    // cek panjang judul
+    if (judul.length > 100) {
+      deleteUploadArtikel(thumbnail);
+      return res.status(400).json({ msg: "Judul terlalu panjang" });
+    }
+
     // get email dari token
     const email = req.user.email;
 
@@ -123,6 +130,12 @@ const updateArtikel = async (req, res) => {
   const { id } = req.params; // ID artikel
   const { judul, deskripsi, kategori_id } = req.body;
   const newThumbnail = req.file ? req.file.filename : null;
+
+  // cek panjang judul
+  if (judul.length > 100) {
+    return res.status(400).json({ msg: "Judul terlalu panjang" });
+  }
+
   // get email dari token
   const email = req.user.email;
 
@@ -202,13 +215,7 @@ const deleteArtikel = async (req, res) => {
     // Path gambar lama
     const thumbnail = gambar[0].thumbnail;
     if (thumbnail) {
-      // Cek apakah thumbnail tidak null
-      const hapusgambar = path.resolve("upload/artikel", thumbnail);
-
-      // Hapus file gambar jika ada
-      if (fs.existsSync(hapusgambar)) {
-        await fs.promises.unlink(hapusgambar);
-      }
+      deleteUploadArtikel(thumbnail);
     }
     await query(`DELETE FROM artikel WHERE id = ?`, [id]);
     return res.status(200).json({ msg: "Berhasil di hapus" });

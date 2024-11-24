@@ -59,6 +59,11 @@ const getKategori = async (req, res) => {
 const tambahKategori = async (req, res, next) => {
   const { nama_kategori } = req.body;
 
+  // cek data nama_kategori tidak melebihi panjang colom
+  if (nama_kategori.length > 50) {
+    return res.status(400).json({ msg: "Nama Kategori terlalu panjang" });
+  }
+
   // get email dari token
   const email = req.user.email;
 
@@ -97,6 +102,11 @@ const updateKategori = async (req, res) => {
   // get data
   const { nama_kategori } = req.body;
   const { id } = req.params;
+
+  // cek panjang judul
+  if (nama_kategori > 100) {
+    return res.status(400).json({ msg: "Nama Kategori terlalu panjang" });
+  }
 
   // get email dari token
   const email = req.user.email;
