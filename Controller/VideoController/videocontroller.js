@@ -1,6 +1,7 @@
 import { query } from "../../database/database.js";
 import path from "path";
 import fs from "fs";
+import { deleteUploadVideo } from "../../utils/deleteUploadVideo.js";
 
 // Get data video dengan pagination
 const getVideo = async (req, res) => {
@@ -81,6 +82,19 @@ const getVideoDetail = async (req, res) => {
 const tambahVideo = async (req, res) => {
   try {
     const { judul, deskripsi, kategori_id } = req.body;
+    // variabel untuk video dan thumbnail
+    const videoName = req.files["video"]
+      ? req.files["video"][0].filename
+      : null;
+    const thumbnail = req.files["thumbnail"]
+      ? req.files["thumbnail"][0].filename
+      : null;
+
+    // cek panjang judul
+    if (judul.length > 100) {
+      deleteUploadVideo(thumbnail, videoName);
+      return res.status(400).json({ msg: "Judul terlalu panjang" });
+    }
 
     // get email dari token
     const email = req.user.email;
@@ -91,14 +105,6 @@ const tambahVideo = async (req, res) => {
       return res.status(400).json({ msg: "User tidak ditemukan" });
     }
     const user_id = users[0].id;
-
-    // variabel untuk video dan thumbnail
-    const videoName = req.files["video"]
-      ? req.files["video"][0].filename
-      : null;
-    const thumbnail = req.files["thumbnail"]
-      ? req.files["thumbnail"][0].filename
-      : null;
 
     // Set timestamp untuk created_at dan updated_at
     const timestamp = new Date();
@@ -123,7 +129,7 @@ const tambahVideo = async (req, res) => {
     return res.status(200).json({
       msg: "Video berhasil ditambahkan",
       data: {
-        judul_video,
+        judul,
         deskripsi,
         videoName,
         thumbnail,
@@ -147,6 +153,12 @@ const updateVideo = async (req, res) => {
   const newThumbnail = req.files["thumbnail"]
     ? req.files["thumbnail"][0].filename
     : null;
+
+  // cek panjang judul
+  if (judul.length > 100) {
+    deleteUploadVideo(newThumbnail, newVideo);
+    return res.status(400).json({ msg: "Judul terlalu panjang" });
+  }
 
   // get email dari token
   const email = req.user.email;
@@ -240,24 +252,8 @@ const deleteVideo = async (req, res) => {
     const videoLama = video[0].video;
     const gambarLama = video[0].thumbnail;
 
-    if (gambarLama) {
-      // Cek apakah thumbnail tidak null
-      const hapusgambar = path.resolve("upload/video/thumb", gambarLama);
-
-      // Hapus file gambar jika ada
-      if (fs.existsSync(hapusgambar)) {
-        await fs.promises.unlink(hapusgambar);
-      }
-    }
-
-    if (videoLama) {
-      // Cek apakah video tidak null
-      const hapusvideo = path.resolve("upload/video/video", videoLama);
-
-      // Hapus file video jika ada
-      if (fs.existsSync(hapusvideo)) {
-        await fs.promises.unlink(hapusvideo);
-      }
+    if (gambarLama || videoLama) {
+      deleteUploadVideo(gambarLama, videoLama);
     }
 
     await query(`DELETE FROM video WHERE id = ?`, [id]);
