@@ -12,5 +12,4 @@ router.get('/riwayat', getRiwayatLimbah);
 router.put("/hasilolahan/:riwayat_id", upload.single("gambar_olahan"), edithasilolahan);
 router.get("/jumlaholahan", getJumlahOlahan);
 
-
 export default router;
