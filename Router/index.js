@@ -9,6 +9,9 @@ import videorouter from "./VideoRouter/videorouter.js";
 import komunitasrouter from "./KomunitasRouter/komunitasrouter.js";
 import indikatorrouter from "./MenejementRouter/indikatorrouter.js";
 import passport from "../middleware/passport.js";
+import olahanrouter from "./MenejementRouter/olahanrouter.js";
+import riwayatrouter from "./MenejementRouter/riwayatrouter.js";
+import notification from "./MenejementRouter/notificationrouter.js"
 
 const Router = express();
 const api = "/api/v1";
@@ -79,9 +82,17 @@ Router.use(
 );
 
 // Rute Limbah
-Router.use(api, limbahrouter);
+Router.use(api, passport.authenticate("internal-rule", { session: false }), limbahrouter);
 
 // Rute indikator
-Router.use(api, indikatorrouter);
+Router.use(api, passport.authenticate("internal-rule", { session: false }), indikatorrouter); 
+
+// Rute indikator
+Router.use(api, passport.authenticate("internal-rule", { session: false }), olahanrouter);
+
+// Rute riwayat
+Router.use(api, passport.authenticate("internal-rule", { session: false }), riwayatrouter);
+
+Router.use(api, passport.authenticate("internal-rule", { session: false }), notification);
 
 export default Router;

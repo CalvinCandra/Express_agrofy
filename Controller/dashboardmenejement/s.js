@@ -7,73 +7,61 @@ const getUserIdByEmail = async (email) => {
 
 // Controller: Tambah Pengolahan Limbah
 const tambahPengolahanLimbah = async (req, res) => {
-    const { limbah_id, target_olahan, tgl_mulai, tgl_selesai, status, catatanPeriode } = req.body;
-    const email = req.user.email;
-  
-    try {
-      const user_id = await getUserIdByEmail(email);
+  const { limbah_id, target_olahan, tgl_mulai, tgl_selesai, status, catatanPeriode } = req.body;
+  const email = req.user.email; // Asumsikan email ada di JWT atau session
+
+  try {
+    const user_id = await getUserIdByEmail(email);
     if (!user_id) {
       return res.status(404).json({ msg: "User tidak ditemukan" });
     }
 
-      // Menambahkan data ke tabel pengelolaan limbah
-      const result = await query(
-        `INSERT INTO pengelolaan_limbah (limbah_id, target_olahan, tgl_mulai, tgl_selesai, status) VALUES (?, ?, ?, ?, ?)`,
-        [limbah_id, target_olahan, tgl_mulai, tgl_selesai, status]
+    // Menambahkan data ke tabel pengelolaan limbah dengan user_id
+    const result = await query(
+      `INSERT INTO pengelolaan_limbah (limbah_id, target_olahan, tgl_mulai, tgl_selesai, status) VALUES (?, ?, ?, ?, ?)`,
+      [limbah_id, target_olahan, tgl_mulai, tgl_selesai, status]
+    );
+
+    const pengolahanId = result.insertId;
+
+    // Menambahkan catatan periode
+    if (catatanPeriode && catatanPeriode.length > 0) {
+      const values = catatanPeriode.map((catatan) => [
+        pengolahanId,
+        catatan.tgl_mulai,
+        catatan.tgl_selesai,
+        catatan.catatan,
+      ]);
+
+      await query(
+        `INSERT INTO catatan_pengelolahan (pengolahan_id, tgl_mulai, tgl_selesai, catatan) VALUES ?`,
+        [values]
       );
-  
-      const pengolahanId = result.insertId; // ID pengolahan limbah yang baru
-  
-      // Menambahkan catatan periode
-      if (catatanPeriode && catatanPeriode.length > 0) {
-        const values = catatanPeriode.map((catatan) => [
-          pengolahanId,
-          catatan.tgl_mulai,
-          catatan.tgl_selesai,
-          catatan.catatan,
-        ]);
-  
-        await query(
-          `INSERT INTO catatan_pengelolahan (pengolahan_id, tgl_mulai, tgl_selesai, catatan) VALUES ?`,
-          [values]
-        );
-      }
-  
-      return res.status(200).json({
-        msg: "Pengolahan limbah berhasil ditambahkan",
-        pengolahan_id: pengolahanId,
-      });
-    } catch (error) {
-      console.error("Error pada tambahPengolahanLimbah:", error.message); // Pesan error
-      console.error("Detail lengkap:", error); // Detail error jika diperlukan
-  
-      return res.status(400).json({
-        msg: "Gagal menambahkan pengolahan limbah",
-        error: error.message, // Menampilkan pesan error kepada klien
-      });
     }
-  };
-  
+
+    return res.status(200).json({
+      msg: "Pengolahan limbah berhasil ditambahkan",
+      pengolahan_id: pengolahanId,
+    });
+  } catch (error) {
+    console.error("Error pada tambahPengolahanLimbah:", error.message);
+    return res.status(400).json({
+      msg: "Gagal menambahkan pengolahan limbah",
+      error: error.message,
+    });
+  }
+};
 
 // Controller: Ambil Semua Pengolahan Limbah
-// Controller: Ambil Semua Pengolahan Limbah Berdasarkan User Login
 const getAllPengolahanLimbah = async (req, res) => {
   const email = req.user.email;
 
   try {
-    // Ambil user_id berdasarkan email
-    const userResult = await query("SELECT id FROM user WHERE email = ?", [email]);
-
-    // Jika user tidak ditemukan
-    if (userResult.length === 0) {
-      return res.status(404).json({
-        msg: "User tidak ditemukan",
-      });
+    const user_id = await getUserIdByEmail(email);
+    if (!user_id) {
+      return res.status(404).json({ msg: "User tidak ditemukan" });
     }
 
-    const user_id = userResult[0].id;
-
-    // Ambil data pengolahan limbah yang sesuai dengan user_id
     const pengolahanLimbah = await query(
       `SELECT p.id, l.nama_limbah, p.target_olahan, p.tgl_mulai, p.tgl_selesai, p.status
        FROM pengelolaan_limbah p
@@ -94,8 +82,6 @@ const getAllPengolahanLimbah = async (req, res) => {
   }
 };
 
-
-
 // Controller: Hapus Pengolahan Limbah
 const hapusPengolahanLimbah = async (req, res) => {
   const { id } = req.params;
@@ -106,6 +92,19 @@ const hapusPengolahanLimbah = async (req, res) => {
     if (!user_id) {
       return res.status(404).json({ msg: "User tidak ditemukan" });
     }
+
+    // Verifikasi apakah user_id memiliki akses ke pengolahan limbah ini
+    const pengolahan = await query(
+      `SELECT * FROM pengelolaan_limbah p 
+       JOIN limbah l ON p.limbah_id = l.id 
+       WHERE p.id = ? AND l.user_id = ?`,
+      [id, user_id]
+    );
+
+    if (pengolahan.length === 0) {
+      return res.status(403).json({ msg: "Anda tidak memiliki akses untuk menghapus pengolahan ini" });
+    }
+
     // Hapus catatan terkait pengelolaan limbah
     await query(`DELETE FROM catatan_pengelolahan WHERE pengolahan_id = ?`, [id]);
 
@@ -118,9 +117,7 @@ const hapusPengolahanLimbah = async (req, res) => {
 
     return res.status(200).json({ msg: "Pengolahan limbah dan catatan terkait berhasil dihapus" });
   } catch (error) {
-    console.error("Error pada hapusPengolahanLimbah:", error.message); // Log error
-    console.error("Detail lengkap:", error); // Log detailed error
-
+    console.error("Error pada hapusPengolahanLimbah:", error.message);
     return res.status(400).json({
       msg: "Gagal menghapus pengolahan limbah",
       error: error.message,
@@ -128,7 +125,7 @@ const hapusPengolahanLimbah = async (req, res) => {
   }
 };
 
-
+// Controller: Get Detail Pengolahan Limbah
 const getDetailPengolahanLimbah = async (req, res) => {
   const { id } = req.params;
   const email = req.user.email;
@@ -138,20 +135,19 @@ const getDetailPengolahanLimbah = async (req, res) => {
     if (!user_id) {
       return res.status(404).json({ msg: "User tidak ditemukan" });
     }
-    // Ambil data pengolahan limbah
+
     const pengolahanLimbah = await query(
       `SELECT p.id, l.nama_limbah, l.gambar, p.target_olahan, p.tgl_mulai, p.tgl_selesai, p.status
        FROM pengelolaan_limbah p
        JOIN limbah l ON p.limbah_id = l.id
-       WHERE p.id = ?`,
-      [id]
+       WHERE p.id = ? AND l.user_id = ?`,
+      [id, user_id]
     );
 
     if (pengolahanLimbah.length === 0) {
       return res.status(404).json({ msg: "Pengolahan limbah tidak ditemukan" });
     }
 
-    // Ambil data catatan pengolahan limbah
     const catatanPeriode = await query(
       `SELECT tgl_mulai, tgl_selesai, catatan 
        FROM catatan_pengelolahan 
@@ -159,10 +155,9 @@ const getDetailPengolahanLimbah = async (req, res) => {
       [id]
     );
 
-    // Gabungkan data pengolahan limbah dengan catatan
     const result = {
       ...pengolahanLimbah[0],
-      catatanPeriode: catatanPeriode || [], // Jika tidak ada catatan, kirim array kosong
+      catatanPeriode: catatanPeriode || [],
     };
 
     return res.status(200).json({
@@ -178,10 +173,8 @@ const getDetailPengolahanLimbah = async (req, res) => {
 };
 
 // Controller: Edit Pengolahan Limbah
-// Controller: Edit Pengolahan Limbah
-// Controller: Edit Pengolahan Limbah
 const editPengolahanLimbah = async (req, res) => {
-  const { id } = req.params; // ID pengolahan limbah yang akan diedit
+  const { id } = req.params;
   const { limbah_id, target_olahan, tgl_mulai, tgl_selesai, status, catatanPeriode } = req.body;
   const email = req.user.email;
 
@@ -190,7 +183,19 @@ const editPengolahanLimbah = async (req, res) => {
     if (!user_id) {
       return res.status(404).json({ msg: "User tidak ditemukan" });
     }
-    // Update data pengolahan limbah
+
+    // Verifikasi apakah user_id memiliki akses ke pengolahan limbah ini
+    const pengolahan = await query(
+      `SELECT * FROM pengelolaan_limbah p 
+       JOIN limbah l ON p.limbah_id = l.id 
+       WHERE p.id = ? AND l.user_id = ?`,
+      [id, user_id]
+    );
+
+    if (pengolahan.length === 0) {
+      return res.status(403).json({ msg: "Anda tidak memiliki akses untuk mengedit pengolahan ini" });
+    }
+
     const result = await query(
       `UPDATE pengelolaan_limbah 
        SET target_olahan = ?, tgl_mulai = ?, tgl_selesai = ?, status = ? 
@@ -205,10 +210,9 @@ const editPengolahanLimbah = async (req, res) => {
     // Menghapus catatan periode lama jika ada
     await query(`DELETE FROM catatan_pengelolahan WHERE pengolahan_id = ?`, [id]);
 
-    // Menambahkan catatan periode baru jika ada
     if (catatanPeriode && catatanPeriode.length > 0) {
       const values = catatanPeriode.map((catatan) => [
-        id, // ID pengolahan limbah
+        id,
         catatan.tgl_mulai,
         catatan.tgl_selesai,
         catatan.catatan,
@@ -220,38 +224,9 @@ const editPengolahanLimbah = async (req, res) => {
       );
     }
 
-    // Handle status "selesai" and "gagal"
-    let riwayatId = null;
-
-    if (status === 'selesai' || status === 'gagal') {
-      // Insert into riwayat_pengolahan
-      const riwayatResult = await query(
-        `INSERT INTO riwayat (pengelolaan_id, tgl_selesai) 
-         VALUES (?, ?)`,
-        [id, tgl_selesai]
-      );
-
-      riwayatId = riwayatResult.insertId; // Get the ID of the inserted riwayat record
-
-      // Insert into hasil_olahan only if the status is "selesai"
-      if (status === 'selesai') {
-        await query(
-          `INSERT INTO hasil_olahan (riwayat_id) 
-           VALUES (?)`,
-          [riwayatId]
-        );
-      }
-    }
-
-    return res.status(200).json({
-      msg: "Pengolahan limbah berhasil diperbarui",
-      pengolahan_id: id,
-      riwayat_id: riwayatId,
-    });
+    return res.status(200).json({ msg: "Pengolahan limbah berhasil diperbarui" });
   } catch (error) {
     console.error("Error pada editPengolahanLimbah:", error.message);
-    console.error("Detail lengkap:", error);
-
     return res.status(400).json({
       msg: "Gagal memperbarui pengolahan limbah",
       error: error.message,
