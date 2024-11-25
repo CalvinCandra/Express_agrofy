@@ -12,7 +12,7 @@ const __dirname = path.dirname(__filename);
 // Konfigurasi multer untuk menyimpan file
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, "../../img/upload"));
+    cb(null, path.join(__dirname, "../../upload/menejemen"));
   },
   filename: (req, file, cb) => {
     const md5Hash = crypto.createHash("md5").update(file.originalname).digest("hex");

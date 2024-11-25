@@ -46,7 +46,7 @@ Router.use(
 );
 
 // Middleware untuk melayani file statis
-Router.use("/uploads", express.static(path.join(process.cwd(), "img/upload")));
+Router.use("/uploads", express.static(path.join(process.cwd(), "upload/menejemen")));
 // `process.cwd()` akan merujuk ke direktori root proyek saat aplikasi dijalankan
 
 // Rute Auth
