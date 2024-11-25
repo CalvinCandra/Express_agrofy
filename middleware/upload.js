@@ -104,4 +104,35 @@ const uploadKomunitas = multer({
   },
 });
 
-export { uploadArtikel, uploadVideo, uploadKomunitas };
+// ======================================================================================== Profile
+const storageProfile = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const folder = "upload/profile/";
+    if (!fs.existsSync(folder)) {
+      fs.mkdirSync(folder, { recursive: true });
+    }
+    cb(null, folder);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + path.extname(file.originalname)); // Nama file unik
+  },
+});
+
+const uploadProfile = multer({
+  storage: storageProfile,
+  limits: { fileSize: 10 * 1024 * 1024 }, // Maksimum 10MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png/;
+    const extname = allowedTypes.test(
+      path.extname(file.originalname).toLowerCase()
+    );
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      cb(null, true);
+    } else {
+      cb(new Error("Hanya file gambar dengan format .jpg, .jpeg, atau .png"));
+    }
+  },
+});
+
+export { uploadArtikel, uploadVideo, uploadKomunitas, uploadProfile };
