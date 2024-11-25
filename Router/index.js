@@ -38,6 +38,11 @@ Router.use(
   express.static(path.join(process.cwd(), "upload/video/thumb"))
 );
 
+Router.use(
+  "/profile",
+  express.static(path.join(process.cwd(), "upload/profile"))
+);
+
 // Middleware untuk melayani file statis
 Router.use("/uploads", express.static(path.join(process.cwd(), "img/upload")));
 // `process.cwd()` akan merujuk ke direktori root proyek saat aplikasi dijalankan
