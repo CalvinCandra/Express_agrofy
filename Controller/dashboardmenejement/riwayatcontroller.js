@@ -165,5 +165,59 @@ const getJumlahOlahan = async (req, res) => {
   }
 };
 
+const getRiwayatolahan = async (req, res) => {
+  try {
+    const email = req.user.email; // Ambil email dari JWT payload
 
-export{getRiwayatLimbah, edithasilolahan, fileFilter, storage, getJumlahOlahan}
+    // Cari user_id berdasarkan email
+    const userResult = await query("SELECT id FROM user WHERE email = ?", [email]);
+
+    // Jika user tidak ditemukan
+    if (userResult.length === 0) {
+      return res.status(404).json({
+        msg: "User tidak ditemukan",
+      });
+    }
+
+    const user_id = userResult[0].id;
+
+    // Query untuk mengambil data riwayat dengan status selesai
+    const result = await query(`
+      SELECT 
+        riwayat.id AS riwayat_id,
+        riwayat.tgl_selesai,
+        pengelolaan_limbah.target_olahan,
+        pengelolaan_limbah.tgl_mulai,
+        pengelolaan_limbah.tgl_selesai AS tgl_selesai_pengelolaan,
+        pengelolaan_limbah.status,
+        limbah.nama_limbah,
+        limbah.deskripsi AS deskripsi_limbah,
+        limbah.gambar AS gambar_limbah,
+        user.nama_lengkap AS pengelola,
+        hasil_olahan.deskripsi_olahan,
+        hasil_olahan.gambar AS gambar_olahan
+      FROM 
+        riwayat
+      JOIN 
+        pengelolaan_limbah ON riwayat.pengelolaan_id = pengelolaan_limbah.id
+      JOIN 
+        limbah ON pengelolaan_limbah.limbah_id = limbah.id
+      JOIN 
+        user ON limbah.user_id = user.id
+      LEFT JOIN 
+        hasil_olahan ON riwayat.id = hasil_olahan.riwayat_id
+      WHERE 
+        limbah.user_id = ? AND pengelolaan_limbah.status = 'selesai'
+    `, [user_id]);
+
+    // Kirimkan hasil query
+    res.json(result);
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("Terjadi kesalahan pada server");
+  }
+};
+
+
+
+export{getRiwayatLimbah, edithasilolahan, fileFilter, storage, getJumlahOlahan, getRiwayatolahan}
