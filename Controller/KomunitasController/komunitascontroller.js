@@ -30,7 +30,7 @@ const getKomunitasBalasan = async (req, res) => {
     const komunitasId = req.params.id;
     const result = await query(
       `
-      SELECT balasan.*, user.nama_lengkap, komunitas.* 
+      SELECT balasan.*, user.nama_lengkap, user.foto, komunitas.* 
       FROM balasan
       INNER JOIN user ON balasan.user_id = user.id
       INNER JOIN komunitas ON balasan.komunitas_id = komunitas.id
