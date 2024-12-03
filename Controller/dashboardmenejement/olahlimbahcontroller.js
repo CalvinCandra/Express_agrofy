@@ -224,24 +224,35 @@ const editPengolahanLimbah = async (req, res) => {
     let riwayatId = null;
 
     if (status === 'selesai' || status === 'gagal') {
-      // Insert into riwayat_pengolahan
-      const riwayatResult = await query(
-        `INSERT INTO riwayat (pengelolaan_id, tgl_selesai) 
-         VALUES (?, ?)`,
-        [id, tgl_selesai]
+      // Cek apakah sudah ada riwayat dengan pengelolaan_id yang sama
+      const existingRiwayat = await query(
+        `SELECT id FROM riwayat WHERE pengelolaan_id = ?`,
+        [id]
       );
 
-      riwayatId = riwayatResult.insertId; // Get the ID of the inserted riwayat record
-
-      // Insert into hasil_olahan only if the status is "selesai"
-      if (status === 'selesai') {
-        await query(
-          `INSERT INTO hasil_olahan (riwayat_id) 
-           VALUES (?)`,
-          [riwayatId]
+      if (existingRiwayat.length === 0) {
+        // Insert into riwayat_pengolahan jika belum ada
+        const riwayatResult = await query(
+          `INSERT INTO riwayat (pengelolaan_id, tgl_selesai) 
+           VALUES (?, ?)`,
+          [id, tgl_selesai]
         );
+
+        riwayatId = riwayatResult.insertId; // Get the ID of the inserted riwayat record
+
+        // Insert into hasil_olahan hanya jika status "selesai"
+        if (status === 'selesai') {
+          await query(
+            `INSERT INTO hasil_olahan (riwayat_id) 
+             VALUES (?)`,
+            [riwayatId]
+          );
+        }
+      } else {
+        riwayatId = existingRiwayat[0].id; // Gunakan riwayat yang sudah ada
       }
     }
+
 
     return res.status(200).json({
       msg: "Pengolahan limbah berhasil diperbarui",
