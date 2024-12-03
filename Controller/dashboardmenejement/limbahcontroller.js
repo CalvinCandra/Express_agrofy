@@ -15,7 +15,10 @@ const storage = multer.diskStorage({
     cb(null, path.join(__dirname, "../../upload/menejemen"));
   },
   filename: (req, file, cb) => {
-    const md5Hash = crypto.createHash("md5").update(file.originalname).digest("hex");
+    const md5Hash = crypto
+      .createHash("md5")
+      .update(file.originalname)
+      .digest("hex");
     cb(null, `${md5Hash}${path.extname(file.originalname)}`);
   },
 });
@@ -52,9 +55,11 @@ const tambahLimbah = [
 
       try {
         const email = req.user.email; // Ambil email dari JWT payload
-        
+
         // Cari user_id berdasarkan email
-        const userResult = await query("SELECT id FROM user WHERE email = ?", [email]);
+        const userResult = await query("SELECT id FROM user WHERE email = ?", [
+          email,
+        ]);
 
         // Jika tidak ditemukan user dengan email tersebut
         if (userResult.length === 0) {
@@ -90,17 +95,17 @@ const tambahLimbah = [
   },
 ];
 
-
-// Controller: Ambil Semua Limbah
 // Controller: Ambil Semua Limbah
 const getAllLimbah = [
   passport.authenticate("internal-rule", { session: false }), // Middleware Passport
   async (req, res) => {
     try {
       const email = req.user.email; // Ambil email dari JWT payload
-      
+
       // Cari user_id berdasarkan email
-      const userResult = await query("SELECT id FROM user WHERE email = ?", [email]);
+      const userResult = await query("SELECT id FROM user WHERE email = ?", [
+        email,
+      ]);
 
       // Jika tidak ditemukan user dengan email tersebut
       if (userResult.length === 0) {
@@ -111,15 +116,35 @@ const getAllLimbah = [
 
       const user_id = userResult[0].id;
 
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+
+      const offset = (page - 1) * limit;
+
       // Ambil data limbah berdasarkan user_id
       const limbah = await query(
-        "SELECT id, nama_limbah, deskripsi, gambar FROM limbah WHERE user_id = ?",
+        "SELECT id, nama_limbah, deskripsi, gambar FROM limbah WHERE user_id = ? LIMIT ? OFFSET ?",
+        [user_id, limit, offset]
+      );
+
+      // Hitung jumlah total data artikel
+      const totalResults = await query(
+        `SELECT COUNT(*) AS total FROM limbah
+        WHERE user_id = ?`,
         [user_id]
       );
+      const totalData = totalResults[0].total;
+      const totalPages = Math.ceil(totalData / limit);
 
       return res.status(200).json({
         msg: "Berhasil mengambil data limbah",
         data: limbah,
+        pagination: {
+          totalData,
+          totalPages,
+          currentPage: page,
+          perPage: limit,
+        },
       });
     } catch (error) {
       return res.status(400).json({
@@ -140,7 +165,9 @@ const hapusLimbah = [
       const email = req.user.email; // Ambil email dari JWT payload
 
       // Cari user_id berdasarkan email
-      const userResult = await query("SELECT id FROM user WHERE email = ?", [email]);
+      const userResult = await query("SELECT id FROM user WHERE email = ?", [
+        email,
+      ]);
 
       // Jika tidak ditemukan user dengan email tersebut
       if (userResult.length === 0) {
@@ -152,7 +179,10 @@ const hapusLimbah = [
       const user_id = userResult[0].id;
 
       // Pastikan limbah yang akan dihapus adalah milik user yang sedang login
-      const result = await query("DELETE FROM limbah WHERE id = ? AND user_id = ?", [id, user_id]);
+      const result = await query(
+        "DELETE FROM limbah WHERE id = ? AND user_id = ?",
+        [id, user_id]
+      );
 
       if (result.affectedRows === 0) {
         return res.status(404).json({
@@ -178,7 +208,7 @@ const editLimbah = [
   async (req, res) => {
     const { id } = req.params; // ID limbah dari parameter URL
     const { nama_limbah, deskripsi } = req.body; // Data yang dikirim dari form
-    console.log("File:", req.file);  // Log untuk memastikan file diterima
+    console.log("File:", req.file); // Log untuk memastikan file diterima
     const gambar = req.file ? req.file.filename : null; // Nama file MD5 (opsional)
     const updated_at = new Date();
 
@@ -186,7 +216,9 @@ const editLimbah = [
       const email = req.user.email; // Ambil email dari JWT payload
 
       // Cari user_id berdasarkan email
-      const userResult = await query("SELECT id FROM user WHERE email = ?", [email]);
+      const userResult = await query("SELECT id FROM user WHERE email = ?", [
+        email,
+      ]);
 
       // Jika tidak ditemukan user dengan email tersebut
       if (userResult.length === 0) {
@@ -198,7 +230,10 @@ const editLimbah = [
       const user_id = userResult[0].id;
 
       // Ambil data limbah yang ada untuk memastikan tidak ada data yang dihapus secara tidak sengaja
-      const limbahResult = await query("SELECT * FROM limbah WHERE id = ? AND user_id = ?", [id, user_id]);
+      const limbahResult = await query(
+        "SELECT * FROM limbah WHERE id = ? AND user_id = ?",
+        [id, user_id]
+      );
 
       // Jika limbah tidak ditemukan
       if (limbahResult.length === 0) {
@@ -210,9 +245,13 @@ const editLimbah = [
       const existingLimbah = limbahResult[0];
 
       // Gunakan data lama jika input baru kosong atau tidak ada
-      const finalNamaLimbah = nama_limbah?.trim() ? nama_limbah : existingLimbah.nama_limbah;
-      const finalDeskripsi = deskripsi?.trim() ? deskripsi : existingLimbah.deskripsi;
-      
+      const finalNamaLimbah = nama_limbah?.trim()
+        ? nama_limbah
+        : existingLimbah.nama_limbah;
+      const finalDeskripsi = deskripsi?.trim()
+        ? deskripsi
+        : existingLimbah.deskripsi;
+
       // Jika gambar tidak ada (undefined atau null), gunakan gambar lama
       const finalGambar = gambar || existingLimbah.gambar;
 
@@ -222,7 +261,14 @@ const editLimbah = [
         SET nama_limbah = ?, deskripsi = ?, gambar = ?, updated_at = ?
         WHERE id = ? AND user_id = ?
       `;
-      const result = await query(updateQuery, [finalNamaLimbah, finalDeskripsi, finalGambar, updated_at, id, user_id]);
+      const result = await query(updateQuery, [
+        finalNamaLimbah,
+        finalDeskripsi,
+        finalGambar,
+        updated_at,
+        id,
+        user_id,
+      ]);
 
       return res.status(200).json({
         msg: "Limbah berhasil diperbarui",
@@ -243,10 +289,11 @@ const editLimbah = [
   },
 ];
 
-
-
-
-
-
-
-export { tambahLimbah, getAllLimbah, hapusLimbah, editLimbah, storage, fileFilter };
+export {
+  tambahLimbah,
+  getAllLimbah,
+  hapusLimbah,
+  editLimbah,
+  storage,
+  fileFilter,
+};
