@@ -1,5 +1,5 @@
 import express from "express";
-import {createNotification, getNotifications } from "../../Controller/dashboardmenejement/notificationcontroller.js";
+import {createNotification, getNotifications, deleteAllNotifications, } from "../../Controller/dashboardmenejement/notificationcontroller.js";
 
 const router = express.Router();
 
@@ -7,5 +7,7 @@ const router = express.Router();
 router.post('/notifikasi', createNotification);
 
 router.get('/notifikasi', getNotifications);
+
+router.delete('/notifikasi', deleteAllNotifications);
 
 export default router;

@@ -11,18 +11,19 @@ export const createNotification = async () => {
 
     // Ambil catatan dengan tgl_selesai = hari ini
     const result = await query(`
-      SELECT cp.id 
+      SELECT cp.id, cp.pengolahan_id 
       FROM catatan_pengelolahan cp
-      WHERE cp.tgl_selesai = ?
+      WHERE DATE(cp.tgl_selesai) = ?
     `, [today]);
+    
 
     // Jika ada data yang cocok, buat notifikasi
     if (result.length > 0) {
       for (const record of result) {
         await query(`
-          INSERT INTO notifikasi (catatan_id, tgl_notif, created_at, updated_at)
-          VALUES (?, ?, NOW(), NOW())
-        `, [record.id, today]);
+          INSERT INTO notifikasi (catatan_id, tgl_notif, created_at, updated_at, pengelolaan_id)
+          VALUES (?, ?, NOW(), NOW(), ?)
+        `, [record.id, today, record.pengolahan_id]);
       }
       console.log("Notifications created successfully.");
     } else {
@@ -42,7 +43,7 @@ cron.schedule('0 0 * * *', async () => {
 export const getNotifications = async (req, res) => {
   try {
     const email = req.user.email; // Ambil email dari JWT payload
-    
+
     // Cari user_id berdasarkan email
     const userResult = await query("SELECT id FROM user WHERE email = ?", [email]);
 
@@ -55,31 +56,67 @@ export const getNotifications = async (req, res) => {
 
     const user_id = userResult[0].id;
 
-    // Ambil catatan yang sesuai dengan user_id
+    // Ambil data notifikasi berdasarkan user_id
     const result = await query(`
-      SELECT cp.id AS catatan_id, 
-             l.nama_limbah, 
-             p.target_olahan, 
-             l.gambar, 
-             cp.tgl_selesai 
-      FROM catatan_pengelolahan cp
-      JOIN pengelolaan_limbah p ON p.id = cp.pengolahan_id
-      JOIN limbah l ON l.id = p.limbah_id
-      WHERE cp.tgl_selesai = CURDATE()
-      AND l.user_id = ?;
+      SELECT 
+        n.id AS notifikasi_id,
+        n.catatan_id,
+        n.tgl_notif,
+        n.pengelolaan_id,
+        l.nama_limbah,
+        l.gambar
+      FROM notifikasi n
+      LEFT JOIN pengelolaan_limbah p ON n.pengelolaan_id = p.id
+      LEFT JOIN limbah l ON p.limbah_id = l.id
+      WHERE l.user_id = ?
+      ORDER BY n.tgl_notif DESC;
     `, [user_id]);
 
     // Jika ada notifikasi
     if (result.length > 0) {
       res.status(200).json({ notifications: result });
     } else {
-      res.status(200).json({ message: "No notifications found for today." });
+      res.status(200).json({ message: "No notifications found." });
     }
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "An error occurred while fetching notifications." });
   }
 };
+
+export const deleteAllNotifications = async (req, res) => {
+  try {
+    const email = req.user.email; // Ambil email dari JWT payload
+
+    // Cari user_id berdasarkan email
+    const userResult = await query("SELECT id FROM user WHERE email = ?", [email]);
+
+    // Jika tidak ditemukan user dengan email tersebut
+    if (userResult.length === 0) {
+      return res.status(404).json({
+        msg: "User tidak ditemukan",
+      });
+    }
+
+    const user_id = userResult[0].id;
+
+    // Hapus notifikasi berdasarkan user_id
+    await query(`
+      DELETE n
+      FROM notifikasi n
+      JOIN catatan_pengelolahan cp ON n.catatan_id = cp.id
+      JOIN pengelolaan_limbah p ON cp.pengolahan_id = p.id
+      JOIN limbah l ON p.limbah_id = l.id
+      WHERE l.user_id = ?
+    `, [user_id]);
+
+    res.status(200).json({ message: "Semua notifikasi berhasil dihapus untuk pengguna ini." });
+  } catch (error) {
+    console.error("Error deleting notifications:", error);
+    res.status(500).json({ message: "Terjadi kesalahan saat menghapus notifikasi." });
+  }
+};
+
 
 
 
