@@ -87,10 +87,10 @@ const getAllPengolahanLimbah = async (req, res) => {
 
     // Ambil data pengolahan limbah yang sesuai dengan user_id
     const pengolahanLimbah = await query(
-      `SELECT pengelolaan_limbah.*, limbah.*
-       FROM pengelolaan_limbah 
-       INNER JOIN limbah ON pengelolaan_limbah.limbah_id = limbah.id
-       WHERE limbah.user_id = ? LIMIT ? OFFSET ?`,
+      `SELECT p.id, l.nama_limbah, p.target_olahan, p.tgl_mulai, p.tgl_selesai, p.status
+       FROM pengelolaan_limbah p
+       JOIN limbah l ON p.limbah_id = l.id
+       WHERE l.user_id = ? LIMIT ? OFFSET ?`,
       [user_id, limit, offset]
     );
 
