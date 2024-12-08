@@ -19,17 +19,20 @@ const getVideo = async (req, res) => {
       FROM video
       INNER JOIN user ON video.user_id = user.id
       INNER JOIN kategori ON video.kategori_id = kategori.id
-      WHERE video.judul_video LIKE ?
+      WHERE video.judul_video LIKE ? OR kategori.nama_kategori LIKE ?
       ORDER BY video.id DESC
       LIMIT ? OFFSET ?`,
-      [`%${search}%`, limit, offset]
+      [`%${search}%`, `%${search}%`, limit, offset]
     );
 
     // Hitung jumlah total data video
     const totalResults = await query(
-      `SELECT COUNT(*) AS total FROM video WHERE video.judul_video`,
-      [`%${search}%`]
+      `SELECT COUNT(*) AS total FROM video INNER JOIN user ON video.user_id = user.id
+      INNER JOIN kategori ON video.kategori_id = kategori.id
+      WHERE video.judul_video LIKE ? OR kategori.nama_kategori LIKE ?`,
+      [`%${search}%`, `%${search}%`]
     );
+
     const totalData = totalResults[0].total;
     const totalPages = Math.ceil(totalData / limit);
 

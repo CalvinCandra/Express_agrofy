@@ -19,18 +19,22 @@ const getArtikel = async (req, res) => {
       FROM artikel
       INNER JOIN user ON artikel.user_id = user.id
       INNER JOIN kategori ON artikel.kategori_id = kategori.id
-      WHERE artikel.judul_artikel LIKE ?
+      WHERE artikel.judul_artikel LIKE ? OR kategori.nama_kategori LIKE ?
       ORDER BY artikel.id DESC
       LIMIT ? OFFSET ?`,
-      [`%${search}%`, limit, offset]
+      [`%${search}%`, `%${search}%`, limit, offset]
     );
 
     // Hitung jumlah total data artikel
     const totalResults = await query(
-      `SELECT COUNT(*) AS total FROM artikel
-      WHERE artikel.judul_artikel`,
-      [`%${search}%`]
+      `SELECT COUNT(*) AS total 
+      FROM artikel 
+      INNER JOIN user ON artikel.user_id = user.id
+      INNER JOIN kategori ON artikel.kategori_id = kategori.id
+      WHERE artikel.judul_artikel LIKE ? OR kategori.nama_kategori LIKE ?`,
+      [`%${search}%`, `%${search}%`]
     );
+
     const totalData = totalResults[0].total;
     const totalPages = Math.ceil(totalData / limit);
 
