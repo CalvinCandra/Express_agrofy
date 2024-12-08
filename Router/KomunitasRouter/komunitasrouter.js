@@ -14,7 +14,7 @@ komunitasrouter.get("/getkomunitas", getKomunitas);
 komunitasrouter.get("/getkomunitasbalasan/:id", getKomunitasBalasan);
 komunitasrouter.post(
   "/tambahkomunitas",
-  [uploadKomunitas.single("gambar"), validasi(["caption"])],
+  [uploadKomunitas.single("gambar"), validasi(["caption"], ["caption"])],
   tambahKomunitas
 );
 komunitasrouter.post("/tambahbalasan/:id", [

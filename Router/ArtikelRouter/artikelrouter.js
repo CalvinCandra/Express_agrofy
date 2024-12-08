@@ -17,7 +17,7 @@ artikelrouter.post(
   "/tambahartikel",
   [
     uploadArtikel.single("thumbnail"),
-    validasi(["judul", "deskripsi", "kategori_id"]),
+    validasi(["judul", "deskripsi", "kategori_id"], ["deskripsi"]),
   ],
   tambahArtikel
 );
@@ -25,7 +25,7 @@ artikelrouter.put(
   "/updateartikel/:id",
   [
     uploadArtikel.single("thumbnail"),
-    validasi(["judul", "deskripsi", "kategori_id"]),
+    validasi(["judul", "deskripsi", "kategori_id"], ["deskripsi"]),
   ],
   updateArtikel
 );

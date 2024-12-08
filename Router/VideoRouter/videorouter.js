@@ -20,7 +20,7 @@ videorouter.post(
       { name: "video", maxCount: 1 },
       { name: "thumbnail", maxCount: 1 },
     ]),
-    validasi(["judul", "deskripsi", "kategori_id"]),
+    validasi(["judul", "deskripsi", "kategori_id"], ["deskripsi"]),
   ],
   tambahVideo
 );
@@ -31,7 +31,7 @@ videorouter.put(
       { name: "video", maxCount: 1 },
       { name: "thumbnail", maxCount: 1 },
     ]),
-    validasi(["judul", "deskripsi", "kategori_id"]),
+    validasi(["judul", "deskripsi", "kategori_id"], ["deskripsi"]),
   ],
   updateVideo
 );
