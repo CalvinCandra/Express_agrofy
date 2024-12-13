@@ -15,7 +15,10 @@ const storage = multer.diskStorage({
     cb(null, path.join(__dirname, "../../upload/menejemen"));
   },
   filename: (req, file, cb) => {
-    const md5Hash = crypto.createHash("md5").update(file.originalname).digest("hex");
+    const md5Hash = crypto
+      .createHash("md5")
+      .update(file.originalname)
+      .digest("hex");
     cb(null, `${md5Hash}${path.extname(file.originalname)}`);
   },
 });
@@ -39,7 +42,9 @@ const getRiwayatLimbah = async (req, res) => {
     const email = req.user.email; // Ambil email dari JWT payload
 
     // Cari user_id berdasarkan email
-    const userResult = await query("SELECT id FROM user WHERE email = ?", [email]);
+    const userResult = await query("SELECT id FROM user WHERE email = ?", [
+      email,
+    ]);
 
     // Jika user tidak ditemukan
     if (userResult.length === 0) {
@@ -51,7 +56,8 @@ const getRiwayatLimbah = async (req, res) => {
     const user_id = userResult[0].id;
 
     // Query untuk mengambil data riwayat sesuai dengan user_id, serta data hasil olahan
-    const result = await query(`
+    const result = await query(
+      `
       SELECT 
         riwayat.id AS riwayat_id,
         riwayat.tgl_selesai,
@@ -77,7 +83,9 @@ const getRiwayatLimbah = async (req, res) => {
         hasil_olahan ON riwayat.id = hasil_olahan.riwayat_id
       WHERE 
         limbah.user_id = ?
-    `, [user_id]);
+    `,
+      [user_id]
+    );
 
     // Kirimkan hasil query
     res.json(result);
@@ -90,32 +98,44 @@ const getRiwayatLimbah = async (req, res) => {
 // Fungsi untuk mengedit deskripsi dan gambar hasil olahan
 const edithasilolahan = async (req, res) => {
   try {
-    
-    const { riwayat_id } = req.params; // Ambil riwayat_id dari parameter URL
-    const { deskripsi_olahan } = req.body; // Ambil deskripsi olahan dari body request
-    const gambar_olahan = req.file ? req.file.filename : null; // Ambil nama file gambar jika ada
+    const { riwayat_id } = req.params;
+    const { deskripsi_olahan } = req.body;
+    const gambar_olahan = req.file ? req.file.filename : null;
 
-    // Jika tidak ada deskripsi olahan atau gambar yang diubah
-    if (!deskripsi_olahan && !gambar_olahan) {
-      return res.status(400).json({
-        msg: "Deskripsi olahan atau gambar harus diubah",
+    // Ambil data lama dari database
+    const [existingData] = await query(
+      `SELECT deskripsi_olahan, gambar FROM hasil_olahan WHERE riwayat_id = ?`,
+      [riwayat_id]
+    );
+
+    if (!existingData) {
+      return res.status(404).json({
+        msg: "Riwayat olahan tidak ditemukan",
       });
     }
 
-    // Update deskripsi olahan dan gambar ke database
+    // Periksa apakah ada perubahan data
+    if (
+      deskripsi_olahan === existingData.deskripsi_olahan &&
+      (!gambar_olahan || gambar_olahan === existingData.gambar)
+    ) {
+      return res.status(400).json({
+        msg: "Tidak ada perubahan data",
+      });
+    }
+
+    // Update data
     const queryUpdate = `
       UPDATE hasil_olahan
       SET deskripsi_olahan = ?, gambar = ?
       WHERE riwayat_id = ?
     `;
-
-    const result = await query(queryUpdate, [deskripsi_olahan, gambar_olahan, riwayat_id]);
-
-    if (result.affectedRows === 0) {
-      return res.status(404).json({
-        msg: "Riwayat olahan tidak ditemukan",
-      });
-    }
+    const params = [
+      deskripsi_olahan || existingData.deskripsi_olahan,
+      gambar_olahan || existingData.gambar,
+      riwayat_id,
+    ];
+    const result = await query(queryUpdate, params);
 
     res.json({
       msg: "Deskripsi dan gambar olahan berhasil diperbarui",
@@ -131,7 +151,9 @@ const getJumlahOlahan = async (req, res) => {
     const email = req.user.email; // Ambil email dari JWT payload
 
     // Cari user_id berdasarkan email
-    const userResult = await query("SELECT id FROM user WHERE email = ?", [email]);
+    const userResult = await query("SELECT id FROM user WHERE email = ?", [
+      email,
+    ]);
 
     if (userResult.length === 0) {
       return res.status(404).json({ msg: "User tidak ditemukan" });
@@ -140,7 +162,8 @@ const getJumlahOlahan = async (req, res) => {
     const user_id = userResult[0].id;
 
     // Hitung jumlah hasil olahan sesuai user_id
-    const result = await query(`
+    const result = await query(
+      `
       SELECT COUNT(*) AS jumlahOlahan
       FROM hasil_olahan
       WHERE riwayat_id IN (
@@ -156,7 +179,9 @@ const getJumlahOlahan = async (req, res) => {
           )
         )
       )
-    `, [user_id]);
+    `,
+      [user_id]
+    );
 
     res.json({ jumlahOlahan: result[0].jumlahOlahan });
   } catch (err) {
@@ -170,7 +195,9 @@ const getRiwayatolahan = async (req, res) => {
     const email = req.user.email; // Ambil email dari JWT payload
 
     // Cari user_id berdasarkan email
-    const userResult = await query("SELECT id FROM user WHERE email = ?", [email]);
+    const userResult = await query("SELECT id FROM user WHERE email = ?", [
+      email,
+    ]);
 
     // Jika user tidak ditemukan
     if (userResult.length === 0) {
@@ -182,7 +209,8 @@ const getRiwayatolahan = async (req, res) => {
     const user_id = userResult[0].id;
 
     // Query untuk mengambil data riwayat dengan status selesai
-    const result = await query(`
+    const result = await query(
+      `
       SELECT 
         riwayat.id AS riwayat_id,
         riwayat.tgl_selesai,
@@ -208,7 +236,9 @@ const getRiwayatolahan = async (req, res) => {
         hasil_olahan ON riwayat.id = hasil_olahan.riwayat_id
       WHERE 
         limbah.user_id = ? AND pengelolaan_limbah.status = 'selesai'
-    `, [user_id]);
+    `,
+      [user_id]
+    );
 
     // Kirimkan hasil query
     res.json(result);
@@ -218,6 +248,11 @@ const getRiwayatolahan = async (req, res) => {
   }
 };
 
-
-
-export{getRiwayatLimbah, edithasilolahan, fileFilter, storage, getJumlahOlahan, getRiwayatolahan}
+export {
+  getRiwayatLimbah,
+  edithasilolahan,
+  fileFilter,
+  storage,
+  getJumlahOlahan,
+  getRiwayatolahan,
+};

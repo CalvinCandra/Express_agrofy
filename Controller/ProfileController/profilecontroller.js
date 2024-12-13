@@ -70,32 +70,44 @@ const editProfile = async (req, res) => {
 
 // Mengubah password
 const editPassword = async (req, res) => {
-  const { newPassword, confirmPassword } = req.body;
-  const currentEmail = req.user.email; // Email pengguna yang sedang login
-
-  // validasi password dan confirmasi password
-  if (newPassword !== confirmPassword) {
-    return res.status(400).json({ msg: "Password tidak cocok" });
-  }
-  //set untuk password enkripsi
-  const enkripsi = await bcrypt.hash(newPassword, 10);
-
   try {
-    await query("UPDATE user SET password = ? WHERE email = ?", [
-      enkripsi,
+    const { newPassword, confirmPassword } = req.body;
+    const currentEmail = req.user?.email;
+
+    // Validasi input
+    if (!newPassword || !confirmPassword) {
+      return res
+        .status(400)
+        .json({ msg: "Password dan konfirmasi harus diisi" });
+    }
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({ msg: "Password tidak cocok" });
+    }
+    if (newPassword.length < 8) {
+      return res.status(400).json({ msg: "Password harus minimal 8 karakter" });
+    }
+
+    // Enkripsi password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Perbarui password di database
+    const result = await query("UPDATE user SET password = ? WHERE email = ?", [
+      hashedPassword,
       currentEmail,
     ]);
-    return res.status(200).json({
-      msg: "Password berhasil diubah",
-      data: {
-        ...req.body,
-      },
-    });
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ msg: "Pengguna tidak ditemukan" });
+    }
+
+    // Respons berhasil
+    return res.status(200).json({ msg: "Password berhasil diubah" });
   } catch (error) {
-    return res.status(400).json({
-      msg: "Password gagal diubah",
-      error,
-    });
+    // Penanganan kesalahan
+    console.error(error);
+    return res
+      .status(500)
+      .json({ msg: "Terjadi kesalahan pada server", error });
   }
 };
 
