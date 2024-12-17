@@ -13,6 +13,22 @@ const register = async (req, res) => {
     role = "user",
   } = req.body;
 
+  // cek password karater, harus ada symbol, Angka, Huruf Kapital dan minimal 8 karater
+  // Regex untuk validasi password:
+  // - Minimal 8 karakter
+  // - Harus mengandung 1 huruf kapital
+  // - Harus mengandung 1 angka
+  // - Harus mengandung 1 simbol
+  const passwordRegex =
+    /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+
+  // cek
+  if (!passwordRegex.test(password)) {
+    return res.status(400).json({
+      msg: "Password harus ada Huruf Kapital, Angka, Symbol (@ $ ! % * & #), dan Minimal 8 Karakter",
+    });
+  }
+
   // validasi password dan confirmasi password
   if (password !== confirmPassword) {
     return res.status(400).json({ msg: "Password tidak cocok" });

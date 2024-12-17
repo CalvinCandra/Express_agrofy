@@ -80,11 +80,26 @@ const editPassword = async (req, res) => {
         .status(400)
         .json({ msg: "Password dan konfirmasi harus diisi" });
     }
+
+    // cek password karater, harus ada symbol, Angka, Huruf Kapital dan minimal 8 karater
+    // Regex untuk validasi password:
+    // - Minimal 8 karakter
+    // - Harus mengandung 1 huruf kapital
+    // - Harus mengandung 1 angka
+    // - Harus mengandung 1 simbol
+    const passwordRegex =
+      /^(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&#])[A-Za-z\d@$!%*?&#]{8,}$/;
+
+    // cek
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        msg: "Password harus ada Huruf Kapital, Angka, Symbol (@ $ ! % * & #), dan Minimal 8 Karakter",
+      });
+    }
+
+    // cek apakah sama atau tidak
     if (newPassword !== confirmPassword) {
       return res.status(400).json({ msg: "Password tidak cocok" });
-    }
-    if (newPassword.length < 8) {
-      return res.status(400).json({ msg: "Password harus minimal 8 karakter" });
     }
 
     // Enkripsi password
